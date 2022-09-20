@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -18,7 +19,7 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.4"
+const applicationVersion = "v0.0.5"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
@@ -31,6 +32,7 @@ var (
 		"off":       `Power%20Off`,
 		"status":    `Status0`,
 		"statusall": `Status0`,
+		"timers":    `Timers`,
 	}
 )
 
@@ -173,6 +175,171 @@ type PowerResponse struct {
 	Power string `json:"POWER"`
 }
 
+// structure of all timers
+type AllTimers struct {
+	Timers string `json:"Timers"`
+	Timer1 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer1"`
+	Timer2 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer2"`
+	Timer3 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer3"`
+	Timer4 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer4"`
+	Timer5 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer5"`
+	Timer6 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer6"`
+	Timer7 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer7"`
+	Timer8 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer8"`
+	Timer9 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer9"`
+	Timer10 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer10"`
+	Timer11 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer11"`
+	Timer12 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer12"`
+	Timer13 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer13"`
+	Timer14 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer14"`
+	Timer15 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer15"`
+	Timer16 struct {
+		Enable int    `json:"Enable"`
+		Mode   int    `json:"Mode"`
+		Time   string `json:"Time"`
+		Window int    `json:"Window"`
+		Days   string `json:"Days"`
+		Repeat int    `json:"Repeat"`
+		Output int    `json:"Output"`
+		Action int    `json:"Action"`
+	} `json:"Timer16"`
+}
+
 func init() {
 
 	homeDirName, err := os.UserHomeDir()
@@ -184,7 +351,10 @@ func init() {
 	flag.Bool("displayconfig", false, "Display configuration")
 	flag.Bool("help", false, "Help")
 	flag.String("ip", "", "IP")
+	flag.Bool("json", false, "Output JSON")
 	flag.Bool("list", false, "List Devices")
+	flag.String("timer", "", "Timer Number")
+	flag.Bool("timers", false, "List all timers")
 	flag.Bool("version", false, "Version")
 
 	// temp
@@ -315,6 +485,47 @@ func main() {
 
 		}
 
+		// if timers
+		if strings.EqualFold(cleanCommand, "timers") {
+			res := AllTimers{}
+			err := json.Unmarshal(response, &res)
+			checkErr(err)
+
+			if viper.GetBool("json") {
+				// if wanting json output
+				fmt.Printf("%s\n", prettyPrint(res))
+			} else {
+				// if wanting console output
+				w := new(tabwriter.Writer)
+
+				const padding = 1
+				w.Init(os.Stdout, 0, 2, padding, ' ', 0)
+				defer w.Flush()
+
+				// forgive me, this is gross
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "Name", "Enabled", "Mode", "Time", "Window", "Days", "Repeat", "Output", "Action")
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "-------", "-------", "----", "-----", "------", "-------", "------", "------", "------")
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer1", res.Timer1.Enable, res.Timer1.Mode, res.Timer1.Time, res.Timer1.Window, res.Timer1.Days, res.Timer1.Repeat, res.Timer1.Output, res.Timer1.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer2", res.Timer2.Enable, res.Timer2.Mode, res.Timer2.Time, res.Timer2.Window, res.Timer2.Days, res.Timer2.Repeat, res.Timer2.Output, res.Timer2.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer3", res.Timer3.Enable, res.Timer3.Mode, res.Timer3.Time, res.Timer3.Window, res.Timer3.Days, res.Timer3.Repeat, res.Timer3.Output, res.Timer3.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer4", res.Timer4.Enable, res.Timer4.Mode, res.Timer4.Time, res.Timer4.Window, res.Timer4.Days, res.Timer4.Repeat, res.Timer4.Output, res.Timer4.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer5", res.Timer5.Enable, res.Timer5.Mode, res.Timer5.Time, res.Timer5.Window, res.Timer5.Days, res.Timer5.Repeat, res.Timer5.Output, res.Timer5.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer5", res.Timer5.Enable, res.Timer5.Mode, res.Timer5.Time, res.Timer5.Window, res.Timer5.Days, res.Timer5.Repeat, res.Timer5.Output, res.Timer5.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer6", res.Timer6.Enable, res.Timer6.Mode, res.Timer6.Time, res.Timer6.Window, res.Timer6.Days, res.Timer6.Repeat, res.Timer6.Output, res.Timer6.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer7", res.Timer7.Enable, res.Timer7.Mode, res.Timer7.Time, res.Timer7.Window, res.Timer7.Days, res.Timer7.Repeat, res.Timer7.Output, res.Timer7.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer8", res.Timer8.Enable, res.Timer8.Mode, res.Timer8.Time, res.Timer8.Window, res.Timer8.Days, res.Timer8.Repeat, res.Timer8.Output, res.Timer8.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer9", res.Timer9.Enable, res.Timer9.Mode, res.Timer9.Time, res.Timer9.Window, res.Timer9.Days, res.Timer9.Repeat, res.Timer9.Output, res.Timer9.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer10", res.Timer10.Enable, res.Timer10.Mode, res.Timer10.Time, res.Timer10.Window, res.Timer10.Days, res.Timer10.Repeat, res.Timer10.Output, res.Timer10.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer11", res.Timer11.Enable, res.Timer11.Mode, res.Timer11.Time, res.Timer11.Window, res.Timer11.Days, res.Timer11.Repeat, res.Timer11.Output, res.Timer11.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer12", res.Timer12.Enable, res.Timer12.Mode, res.Timer12.Time, res.Timer12.Window, res.Timer12.Days, res.Timer12.Repeat, res.Timer12.Output, res.Timer12.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer13", res.Timer13.Enable, res.Timer13.Mode, res.Timer13.Time, res.Timer13.Window, res.Timer13.Days, res.Timer13.Repeat, res.Timer13.Output, res.Timer13.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer14", res.Timer14.Enable, res.Timer14.Mode, res.Timer14.Time, res.Timer14.Window, res.Timer14.Days, res.Timer14.Repeat, res.Timer14.Output, res.Timer14.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer15", res.Timer15.Enable, res.Timer15.Mode, res.Timer15.Time, res.Timer15.Window, res.Timer15.Days, res.Timer15.Repeat, res.Timer15.Output, res.Timer15.Action)
+				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer16", res.Timer16.Enable, res.Timer16.Mode, res.Timer16.Time, res.Timer16.Window, res.Timer16.Days, res.Timer16.Repeat, res.Timer16.Output, res.Timer16.Action)
+
+				fmt.Println("\nFurther details available here: https://tasmota.github.io/docs/Timers/#json-payload-anatomy")
+			}
+		}
 	}
 }
 
