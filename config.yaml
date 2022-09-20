@@ -1,4 +1,5 @@
 ---
+verbose: false
 devices:
   lamp: 172.28.10.12
   large: 192.168.10.127
