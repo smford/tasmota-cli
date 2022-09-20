@@ -18,15 +18,11 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.2"
+const applicationVersion = "v0.0.3"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
-	apikey string
-	// interval    string
-	// message     string
-	// name        string
-	// silent      bool
+	apikey      string
 	verbose     bool
 	homeDirName string
 
@@ -37,7 +33,7 @@ var (
 	}
 )
 
-type powerResponse struct {
+type PowerResponse struct {
 	Power string `json:"POWER"`
 }
 
@@ -105,7 +101,14 @@ func init() {
 }
 
 func main() {
+	// temp
 	verbose = true
+
+	if !viper.IsSet("cmd") {
+		fmt.Println("Error, no command defined")
+		os.Exit(1)
+	}
+
 	myCommand := viper.GetString("cmd")
 
 	// check if device is valid
@@ -116,6 +119,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// check if command is valid
 	if !isCommandValid(myCommand) {
 		fmt.Printf("Command \"%s\" is invalid\n", myCommand)
 		os.Exit(1)
@@ -126,12 +130,26 @@ func main() {
 
 	response, success := sendTasmota(ipofdevice, commandList[myCommand])
 
-	var myresults powerResponse
-	if success {
-		json.Unmarshal(response, &myresults)
-		fmt.Printf("Prettyprint:\n%s\n", prettyPrint(myresults))
-	} else {
+	if !success {
+		// could not send to tasmota
 		fmt.Println("oops not successful")
+		os.Exit(1)
+	} else {
+		// good response from tasmota returned
+
+		cleanCommand := strings.ToLower(myCommand)
+
+		// if power on or power off
+		if strings.EqualFold(cleanCommand, "on") || strings.EqualFold(cleanCommand, "off") {
+			res := PowerResponse{}
+			err := json.Unmarshal(response, &res)
+			checkErr(err)
+			fmt.Printf("Prettyprint:\n%s\n--\n", prettyPrint(res))
+			fmt.Printf("State: %s\n", res.Power)
+		}
+
+		// if status
+
 	}
 }
 
