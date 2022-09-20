@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,15 +18,15 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.1"
+const applicationVersion = "v0.0.2"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
-	apikey      string
-	interval    string
-	message     string
-	name        string
-	silent      bool
+	apikey string
+	// interval    string
+	// message     string
+	// name        string
+	// silent      bool
 	verbose     bool
 	homeDirName string
 
@@ -36,6 +36,10 @@ var (
 		"status": `Status0`,
 	}
 )
+
+type powerResponse struct {
+	Power string `json:"POWER"`
+}
 
 func init() {
 
@@ -119,40 +123,53 @@ func main() {
 
 	// send the command
 	ipofdevice := viper.GetStringMap("devices")[viper.GetString("device")].(string)
-	sendTasmota(ipofdevice, commandList[myCommand])
+
+	response, success := sendTasmota(ipofdevice, commandList[myCommand])
+
+	var myresults powerResponse
+	if success {
+		json.Unmarshal(response, &myresults)
+		fmt.Printf("Prettyprint:\n%s\n", prettyPrint(myresults))
+	} else {
+		fmt.Println("oops not successful")
+	}
 }
 
-func sendTasmota(tasmota string, cmd string) {
-	client := &http.Client{}
-	client.Timeout = time.Second * 15
-	tasmota = url.QueryEscape(tasmota)
-	if verbose {
-		fmt.Printf("http://%s/cm?cmnd=%s\n", tasmota, cmd)
-	}
-	uri := fmt.Sprintf("http://%s/cm?cmnd=%s", tasmota, cmd)
-	data := url.Values{
-		"m": []string{message},
-	}
-	resp, err := client.PostForm(uri, data)
+// send a command to the tasmota
+func sendTasmota(ip string, cmd string) ([]byte, bool) {
+
+	url := fmt.Sprintf("http://%s/cm?cmnd=%s", ip, cmd)
+
+	fmt.Printf("URL: %s\n", url)
+
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		log.Fatalf("client.PosFormt() failed with '%s'\n", err)
+		log.Fatal("NewRequest: ", err)
 	}
+
+	client := &http.Client{}
+	client.Timeout = time.Second * 5
+	resp, err := client.Do(req)
+	checkErr(err)
+
 	defer resp.Body.Close()
 
-	tasmotaresponse, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatalf("ioutil.ReadAll() failed with '%s'\n", err)
+	wassucessful := false
+	if resp.StatusCode == http.StatusOK {
+		wassucessful = true
 	}
 
-	if verbose {
-		fmt.Println("Response Code:", resp.StatusCode, "Response Text:", http.StatusText(resp.StatusCode), "Message:", tasmotaresponse)
-	}
+	bodyBytes, err := io.ReadAll(resp.Body)
+	checkErr(err)
 
-	if !silent {
-		if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
-			fmt.Println("Success")
-		}
-	}
+	return bodyBytes, wassucessful
+
+}
+
+// prints out json pretty
+func prettyPrint(i interface{}) string {
+	s, _ := json.MarshalIndent(i, "", "\t")
+	return string(s)
 }
 
 // checks if a command is valid
