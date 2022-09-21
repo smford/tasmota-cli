@@ -19,7 +19,7 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.5"
+const applicationVersion = "v0.0.5.1"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
@@ -475,7 +475,7 @@ func main() {
 					powerState = "UNKNOWN"
 				}
 
-				fmt.Printf("%s:%s\n", viper.GetString("device"), powerState)
+				fmt.Printf("%s\n", powerState)
 
 			}
 
