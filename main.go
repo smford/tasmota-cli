@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -19,7 +20,7 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.5.1"
+const applicationVersion = "v0.0.6"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
@@ -347,13 +348,15 @@ func init() {
 
 	flag.String("cmd", "", "Command")
 	flag.String("config", homeDirName+"/.tasproxy", "Configuration file: /path/to/file.yaml, default = "+homeDirName+"/.tasproxy")
+	flag.String("custom", "", "Custom command")
 	flag.String("device", "", "Device")
 	flag.Bool("displayconfig", false, "Display configuration")
 	flag.Bool("help", false, "Help")
 	flag.String("ip", "", "IP")
 	flag.Bool("json", false, "Output JSON")
 	flag.Bool("list", false, "List Devices")
-	flag.String("timer", "", "Timer Number")
+	flag.String("payload", "", "Timer Payload")
+	flag.Int("timer", 0, "Timer Number")
 	flag.Bool("timers", false, "List all timers")
 	flag.Bool("version", false, "Version")
 
@@ -413,12 +416,49 @@ func main() {
 	// temp
 	verbose = viper.GetBool("verbose")
 
-	if !viper.IsSet("cmd") {
-		fmt.Println("Error, no command defined")
+	if (!viper.IsSet("timer")) && (!viper.IsSet("cmd")) {
+		fmt.Println("timer or cmd not set")
 		os.Exit(1)
 	}
 
-	myCommand := viper.GetString("cmd")
+	if (viper.IsSet("timer")) && (viper.IsSet("cmd")) {
+		fmt.Println("timer or cmd cannot be used at the same time")
+		os.Exit(1)
+	}
+
+	if viper.IsSet("timer") {
+		fmt.Println("timer set")
+
+		// prepare setting timer
+		if viper.IsSet("timer") {
+			if (viper.GetInt("timer") >= 1) && (viper.GetInt("timer") <= 16) {
+				fmt.Println("valid timer")
+				fmt.Println("constructing json")
+				// Timer4  {"Enable":1,         "Time":"16:23","Window":15,"Days":"SM00TF0","Repeat":0,"Output":2,"Action":2}
+				// Timer16 {"Enable":0,"Mode":0,"Time":"13:11","Window":15,"Days":"1111111","Repeat":1,"Output":1,"Action":0}
+				junk := "Timer16 {\"Enable\":0,\"Mode\":0,\"Time\":\"13:11\",\"Window\":15,\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}"
+				fmt.Printf("Timer%d Payload: %s\n", viper.GetInt("timer"), viper.GetString("payload"))
+				fmt.Printf("junk: %s\n", junk)
+				fmt.Printf("junk: %s\n", url.QueryEscape(junk))
+			} else {
+				fmt.Println("not valid timer")
+			}
+
+		}
+
+	}
+
+	if viper.IsSet("cmd") {
+		fmt.Println("cmd set")
+
+		myCommand := viper.GetString("cmd")
+
+		// check if command is valid
+		if !isCommandValid(myCommand) {
+			fmt.Printf("Command \"%s\" is invalid\n", myCommand)
+			os.Exit(1)
+		}
+	}
 
 	// check if device is valid
 	if checkDeviceValid(viper.GetString("device")) {
@@ -430,13 +470,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// check if command is valid
-	if !isCommandValid(myCommand) {
-		fmt.Printf("Command \"%s\" is invalid\n", myCommand)
-		os.Exit(1)
-	}
-
 	// send the command
+	//myCommand := "statusall"
+	myCommand := viper.GetString("cmd")
 	ipofdevice := viper.GetStringMap("devices")[viper.GetString("device")].(string)
 
 	response, success := sendTasmota(ipofdevice, commandList[myCommand])
