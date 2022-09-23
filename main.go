@@ -21,7 +21,7 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.7.0"
+const applicationVersion = "v0.0.7.1"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
@@ -674,8 +674,18 @@ func displayConfig() {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
+
+	w := new(tabwriter.Writer)
+
+	const padding = 1
+	w.Init(os.Stdout, 0, 2, padding, ' ', 0)
+	defer w.Flush()
+
+	fmt.Fprintf(w, "%s\t%s\n", "Config", "Setting")
+	fmt.Fprintf(w, "%s\t%s\n", "------", "-------")
+
 	for _, k := range keys {
-		fmt.Println("CONFIG:", k, ":", allmysettings[k])
+		fmt.Fprintf(w, "%s\t%v\n", k, allmysettings[k])
 	}
 }
 
