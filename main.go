@@ -21,7 +21,7 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.7.1"
+const applicationVersion = "v0.0.7.2"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
@@ -347,18 +347,18 @@ func init() {
 	homeDirName, err := os.UserHomeDir()
 	checkErr(err)
 
-	flag.String("cmd", "", "Command")
+	flag.String("cmd", "", "Command: on, off, status, statusall, timers")
 	flag.String("config", homeDirName+"/.tasproxy", "Configuration file: /path/to/file.yaml, default = "+homeDirName+"/.tasproxy")
 	flag.String("custom", "", "Custom command")
 	flag.String("device", "", "Device")
 	flag.Bool("displayconfig", false, "Display configuration")
 	flag.Bool("help", false, "Help")
+
+	// to implement
 	flag.String("ip", "", "IP")
+
 	flag.Bool("json", false, "Output JSON")
 	flag.Bool("list", false, "List Devices")
-	flag.String("payload", "", "Timer Payload")
-	flag.Int("timer", 0, "Timer Number")
-	flag.Bool("timers", false, "List all timers")
 	flag.Bool("version", false, "Version")
 
 	// temp
@@ -647,13 +647,16 @@ func isCommandValid(command string) bool {
 // display help
 func displayHelp() {
 	message := `
-      --cmd [x]             Default line character (default: = )
+      --cmd [x]             Commands: on, off, status, statusall, timers
       --config [file]       Configuration file: /path/to/file.yaml, default = "` + homeDirName + `"/.tasproxy"
+      --custom [command]    Custom escaped command string to send
       --device [name]       Name of device
       --displayconfig       Display configuration
-      --ip [ip address]     IP address
-      --list                List all configured devices
       --help                Display help
+      --ip [ip address]     IP address of device
+      --json                Output JSON
+      --list                List all configured devices
+      --verbose             Be verbose
       --version             Display version`
 	fmt.Println(applicationName + " " + applicationVersion + "\n" + applicationUrl)
 	fmt.Println(message)
