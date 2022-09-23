@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -20,7 +21,7 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.6"
+const applicationVersion = "v0.0.6.1"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
@@ -416,46 +417,50 @@ func main() {
 	// temp
 	verbose = viper.GetBool("verbose")
 
-	if (!viper.IsSet("timer")) && (!viper.IsSet("cmd")) {
-		fmt.Println("timer or cmd not set")
+	//
+	//if !viper.IsSet("cmd") {
+	//	fmt.Println("cmd not set")
+	//	os.Exit(1)
+	//}
+
+	if (viper.IsSet("custom")) && (viper.IsSet("cmd")) {
+		fmt.Println("custom or cmd cannot be used at the same time")
 		os.Exit(1)
 	}
 
-	if (viper.IsSet("timer")) && (viper.IsSet("cmd")) {
-		fmt.Println("timer or cmd cannot be used at the same time")
+	if (!viper.IsSet("custom")) && (!viper.IsSet("cmd")) {
+		fmt.Println("either custom or cmd must be set")
 		os.Exit(1)
 	}
 
-	if viper.IsSet("timer") {
-		fmt.Println("timer set")
+	// command to actually send to tasmota
+	var sendCommand string
 
-		// prepare setting timer
-		if viper.IsSet("timer") {
-			if (viper.GetInt("timer") >= 1) && (viper.GetInt("timer") <= 16) {
-				fmt.Println("valid timer")
-				fmt.Println("constructing json")
-				// Timer4  {"Enable":1,         "Time":"16:23","Window":15,"Days":"SM00TF0","Repeat":0,"Output":2,"Action":2}
-				// Timer16 {"Enable":0,"Mode":0,"Time":"13:11","Window":15,"Days":"1111111","Repeat":1,"Output":1,"Action":0}
-				junk := "Timer16 {\"Enable\":0,\"Mode\":0,\"Time\":\"13:11\",\"Window\":15,\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}"
-				fmt.Printf("Timer%d Payload: %s\n", viper.GetInt("timer"), viper.GetString("payload"))
-				fmt.Printf("junk: %s\n", junk)
-				fmt.Printf("junk: %s\n", url.QueryEscape(junk))
-			} else {
-				fmt.Println("not valid timer")
-			}
+	// prep custom command to send
+	if viper.IsSet("custom") {
+		fmt.Println("custom set")
 
-		}
-
+		// Timer4  {"Enable":1,         "Time":"16:23","Window":15,"Days":"SM00TF0","Repeat":0,"Output":2,"Action":2}
+		// Timer16 {"Enable":0,"Mode":0,"Time":"13:11","Window":15,"Days":"1111111","Repeat":1,"Output":1,"Action":0}
+		//junk := "Timer16 {\"Enable\":0,\"Mode\":0,\"Time\":\"13:11\",\"Window\":15,\"Days\":\"1111111\",\"Repeat\":1,\"Output\":1,\"Action\":0}"
+		//fmt.Printf("Timer%d Payload: %s\n", viper.GetInt("timer"), viper.GetString("payload"))
+		//fmt.Printf("junk: %s\n", junk)
+		junk := viper.GetString("custom")
+		fmt.Printf("        junk: %s\n", junk)
+		fmt.Printf("junk escaped: %s\n", url.QueryEscape(junk))
+		sendCommand = url.QueryEscape(junk)
 	}
 
+	// prep cmd to send
 	if viper.IsSet("cmd") {
 		fmt.Println("cmd set")
 
-		myCommand := viper.GetString("cmd")
-
 		// check if command is valid
-		if !isCommandValid(myCommand) {
-			fmt.Printf("Command \"%s\" is invalid\n", myCommand)
+		if isCommandValid(viper.GetString("cmd")) {
+			// convert shorthand cmd to actual tasmota command
+			sendCommand = commandList[viper.GetString("cmd")]
+		} else {
+			fmt.Printf("Command \"%s\" is invalid\n", viper.GetString("cmd"))
 			os.Exit(1)
 		}
 	}
@@ -470,96 +475,119 @@ func main() {
 		os.Exit(1)
 	}
 
+	if verbose {
+		fmt.Printf("sendcommand: %s\n", sendCommand)
+	}
+
 	// send the command
-	//myCommand := "statusall"
-	myCommand := viper.GetString("cmd")
 	ipofdevice := viper.GetStringMap("devices")[viper.GetString("device")].(string)
 
-	response, success := sendTasmota(ipofdevice, commandList[myCommand])
+	response, success := sendTasmota(ipofdevice, sendCommand)
 
 	if !success {
 		// could not send to tasmota
 		fmt.Println("oops not successful")
 		os.Exit(1)
 	} else {
-		// good response from tasmota returned
 
-		cleanCommand := strings.ToLower(myCommand)
-
-		// if power on or power off
-		if strings.EqualFold(cleanCommand, "on") || strings.EqualFold(cleanCommand, "off") {
-			res := PowerResponse{}
-			err := json.Unmarshal(response, &res)
-			checkErr(err)
-			fmt.Printf("%s:%s\n", viper.GetString("device"), res.Power)
+		if verbose {
+			fmt.Printf("successful response: %s\n", prettyPrint(response))
 		}
 
-		// if status or statusall
-		if strings.EqualFold(cleanCommand, "status") || strings.EqualFold(cleanCommand, "statusall") {
-			res := StatusResponse{}
-			err := json.Unmarshal(response, &res)
-			checkErr(err)
+		if viper.IsSet("custom") {
+			fmt.Println("run custom stuff here")
+			var prettyJSON bytes.Buffer
+			error := json.Indent(&prettyJSON, response, "", "\t")
+			checkErr(error)
+			fmt.Println(string(prettyJSON.Bytes()))
+		}
 
-			if strings.EqualFold(cleanCommand, "status") {
-				var powerState string
-				switch res.Status.Power {
-				case 0:
-					powerState = "OFF"
-				case 1:
-					powerState = "ON"
-				default:
-					powerState = "UNKNOWN"
+		if viper.IsSet("cmd") {
+
+			if verbose {
+				fmt.Println("cmd is set")
+			}
+
+			cleanCommand := strings.ToLower(viper.GetString("cmd"))
+
+			fmt.Printf("cleancommand before equalfold: %s\n", cleanCommand)
+
+			// if power on or power off
+			if strings.EqualFold(cleanCommand, "on") || strings.EqualFold(cleanCommand, "off") {
+				res := PowerResponse{}
+				err := json.Unmarshal(response, &res)
+				checkErr(err)
+				fmt.Printf("%s:%s\n", viper.GetString("device"), res.Power)
+			}
+
+			// if status or statusall
+			if strings.EqualFold(cleanCommand, "status") || strings.EqualFold(cleanCommand, "statusall") {
+				res := StatusResponse{}
+				err := json.Unmarshal(response, &res)
+				checkErr(err)
+
+				// if status
+				if strings.EqualFold(cleanCommand, "status") {
+					var powerState string
+					switch res.Status.Power {
+					case 0:
+						powerState = "OFF"
+					case 1:
+						powerState = "ON"
+					default:
+						powerState = "UNKNOWN"
+					}
+
+					fmt.Printf("%s\n", powerState)
+
 				}
 
-				fmt.Printf("%s\n", powerState)
-
+				// if status all
+				if strings.EqualFold(cleanCommand, "statusall") {
+					fmt.Printf("%s\n", prettyPrint(res))
+				}
 			}
 
-			if strings.EqualFold(cleanCommand, "statusall") {
-				fmt.Printf("%s\n", prettyPrint(res))
-			}
+			// if timers
+			if strings.EqualFold(cleanCommand, "timers") {
+				res := AllTimers{}
+				err := json.Unmarshal(response, &res)
+				checkErr(err)
 
-		}
+				if viper.GetBool("json") {
+					// if wanting json output
+					fmt.Printf("%s\n", prettyPrint(res))
+				} else {
+					// if wanting console output
+					w := new(tabwriter.Writer)
 
-		// if timers
-		if strings.EqualFold(cleanCommand, "timers") {
-			res := AllTimers{}
-			err := json.Unmarshal(response, &res)
-			checkErr(err)
+					const padding = 1
+					w.Init(os.Stdout, 0, 2, padding, ' ', 0)
+					defer w.Flush()
 
-			if viper.GetBool("json") {
-				// if wanting json output
-				fmt.Printf("%s\n", prettyPrint(res))
-			} else {
-				// if wanting console output
-				w := new(tabwriter.Writer)
+					// forgive me, this is gross
+					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "Name", "Enabled", "Mode", "Time", "Window", "Days", "Repeat", "Output", "Action")
+					fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "-------", "-------", "----", "-----", "------", "-------", "------", "------", "------")
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer1", res.Timer1.Enable, res.Timer1.Mode, res.Timer1.Time, res.Timer1.Window, res.Timer1.Days, res.Timer1.Repeat, res.Timer1.Output, res.Timer1.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer2", res.Timer2.Enable, res.Timer2.Mode, res.Timer2.Time, res.Timer2.Window, res.Timer2.Days, res.Timer2.Repeat, res.Timer2.Output, res.Timer2.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer3", res.Timer3.Enable, res.Timer3.Mode, res.Timer3.Time, res.Timer3.Window, res.Timer3.Days, res.Timer3.Repeat, res.Timer3.Output, res.Timer3.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer4", res.Timer4.Enable, res.Timer4.Mode, res.Timer4.Time, res.Timer4.Window, res.Timer4.Days, res.Timer4.Repeat, res.Timer4.Output, res.Timer4.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer5", res.Timer5.Enable, res.Timer5.Mode, res.Timer5.Time, res.Timer5.Window, res.Timer5.Days, res.Timer5.Repeat, res.Timer5.Output, res.Timer5.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer5", res.Timer5.Enable, res.Timer5.Mode, res.Timer5.Time, res.Timer5.Window, res.Timer5.Days, res.Timer5.Repeat, res.Timer5.Output, res.Timer5.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer6", res.Timer6.Enable, res.Timer6.Mode, res.Timer6.Time, res.Timer6.Window, res.Timer6.Days, res.Timer6.Repeat, res.Timer6.Output, res.Timer6.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer7", res.Timer7.Enable, res.Timer7.Mode, res.Timer7.Time, res.Timer7.Window, res.Timer7.Days, res.Timer7.Repeat, res.Timer7.Output, res.Timer7.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer8", res.Timer8.Enable, res.Timer8.Mode, res.Timer8.Time, res.Timer8.Window, res.Timer8.Days, res.Timer8.Repeat, res.Timer8.Output, res.Timer8.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer9", res.Timer9.Enable, res.Timer9.Mode, res.Timer9.Time, res.Timer9.Window, res.Timer9.Days, res.Timer9.Repeat, res.Timer9.Output, res.Timer9.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer10", res.Timer10.Enable, res.Timer10.Mode, res.Timer10.Time, res.Timer10.Window, res.Timer10.Days, res.Timer10.Repeat, res.Timer10.Output, res.Timer10.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer11", res.Timer11.Enable, res.Timer11.Mode, res.Timer11.Time, res.Timer11.Window, res.Timer11.Days, res.Timer11.Repeat, res.Timer11.Output, res.Timer11.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer12", res.Timer12.Enable, res.Timer12.Mode, res.Timer12.Time, res.Timer12.Window, res.Timer12.Days, res.Timer12.Repeat, res.Timer12.Output, res.Timer12.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer13", res.Timer13.Enable, res.Timer13.Mode, res.Timer13.Time, res.Timer13.Window, res.Timer13.Days, res.Timer13.Repeat, res.Timer13.Output, res.Timer13.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer14", res.Timer14.Enable, res.Timer14.Mode, res.Timer14.Time, res.Timer14.Window, res.Timer14.Days, res.Timer14.Repeat, res.Timer14.Output, res.Timer14.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer15", res.Timer15.Enable, res.Timer15.Mode, res.Timer15.Time, res.Timer15.Window, res.Timer15.Days, res.Timer15.Repeat, res.Timer15.Output, res.Timer15.Action)
+					fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer16", res.Timer16.Enable, res.Timer16.Mode, res.Timer16.Time, res.Timer16.Window, res.Timer16.Days, res.Timer16.Repeat, res.Timer16.Output, res.Timer16.Action)
 
-				const padding = 1
-				w.Init(os.Stdout, 0, 2, padding, ' ', 0)
-				defer w.Flush()
-
-				// forgive me, this is gross
-				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "Name", "Enabled", "Mode", "Time", "Window", "Days", "Repeat", "Output", "Action")
-				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", "-------", "-------", "----", "-----", "------", "-------", "------", "------", "------")
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer1", res.Timer1.Enable, res.Timer1.Mode, res.Timer1.Time, res.Timer1.Window, res.Timer1.Days, res.Timer1.Repeat, res.Timer1.Output, res.Timer1.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer2", res.Timer2.Enable, res.Timer2.Mode, res.Timer2.Time, res.Timer2.Window, res.Timer2.Days, res.Timer2.Repeat, res.Timer2.Output, res.Timer2.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer3", res.Timer3.Enable, res.Timer3.Mode, res.Timer3.Time, res.Timer3.Window, res.Timer3.Days, res.Timer3.Repeat, res.Timer3.Output, res.Timer3.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer4", res.Timer4.Enable, res.Timer4.Mode, res.Timer4.Time, res.Timer4.Window, res.Timer4.Days, res.Timer4.Repeat, res.Timer4.Output, res.Timer4.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer5", res.Timer5.Enable, res.Timer5.Mode, res.Timer5.Time, res.Timer5.Window, res.Timer5.Days, res.Timer5.Repeat, res.Timer5.Output, res.Timer5.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer5", res.Timer5.Enable, res.Timer5.Mode, res.Timer5.Time, res.Timer5.Window, res.Timer5.Days, res.Timer5.Repeat, res.Timer5.Output, res.Timer5.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer6", res.Timer6.Enable, res.Timer6.Mode, res.Timer6.Time, res.Timer6.Window, res.Timer6.Days, res.Timer6.Repeat, res.Timer6.Output, res.Timer6.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer7", res.Timer7.Enable, res.Timer7.Mode, res.Timer7.Time, res.Timer7.Window, res.Timer7.Days, res.Timer7.Repeat, res.Timer7.Output, res.Timer7.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer8", res.Timer8.Enable, res.Timer8.Mode, res.Timer8.Time, res.Timer8.Window, res.Timer8.Days, res.Timer8.Repeat, res.Timer8.Output, res.Timer8.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer9", res.Timer9.Enable, res.Timer9.Mode, res.Timer9.Time, res.Timer9.Window, res.Timer9.Days, res.Timer9.Repeat, res.Timer9.Output, res.Timer9.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer10", res.Timer10.Enable, res.Timer10.Mode, res.Timer10.Time, res.Timer10.Window, res.Timer10.Days, res.Timer10.Repeat, res.Timer10.Output, res.Timer10.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer11", res.Timer11.Enable, res.Timer11.Mode, res.Timer11.Time, res.Timer11.Window, res.Timer11.Days, res.Timer11.Repeat, res.Timer11.Output, res.Timer11.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer12", res.Timer12.Enable, res.Timer12.Mode, res.Timer12.Time, res.Timer12.Window, res.Timer12.Days, res.Timer12.Repeat, res.Timer12.Output, res.Timer12.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer13", res.Timer13.Enable, res.Timer13.Mode, res.Timer13.Time, res.Timer13.Window, res.Timer13.Days, res.Timer13.Repeat, res.Timer13.Output, res.Timer13.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer14", res.Timer14.Enable, res.Timer14.Mode, res.Timer14.Time, res.Timer14.Window, res.Timer14.Days, res.Timer14.Repeat, res.Timer14.Output, res.Timer14.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer15", res.Timer15.Enable, res.Timer15.Mode, res.Timer15.Time, res.Timer15.Window, res.Timer15.Days, res.Timer15.Repeat, res.Timer15.Output, res.Timer15.Action)
-				fmt.Fprintf(w, "%s\t%d\t%d\t%s\t%d\t%s\t%d\t%d\t%d\n", "Timer16", res.Timer16.Enable, res.Timer16.Mode, res.Timer16.Time, res.Timer16.Window, res.Timer16.Days, res.Timer16.Repeat, res.Timer16.Output, res.Timer16.Action)
-
-				fmt.Println("\nFurther details available here: https://tasmota.github.io/docs/Timers/#json-payload-anatomy")
+					fmt.Println("\nFurther details available here: https://tasmota.github.io/docs/Timers/#json-payload-anatomy")
+				}
 			}
 		}
 	}
@@ -588,6 +616,9 @@ func sendTasmota(ip string, cmd string) ([]byte, bool) {
 
 	wassucessful := false
 	if resp.StatusCode == http.StatusOK {
+		if verbose {
+			fmt.Println("http status = ok")
+		}
 		wassucessful = true
 	}
 
