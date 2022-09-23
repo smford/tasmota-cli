@@ -21,12 +21,13 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.7.3"
+const applicationVersion = "v0.0.7.4"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
 	verbose     bool
 	homeDirName string
+	ipofdevice  string
 
 	commandList = map[string]string{
 		"on":        `Power%20On`,
@@ -348,13 +349,13 @@ func init() {
 
 	flag.String("cmd", "", "Command: on, off, status, statusall, timers")
 	flag.String("config", homeDirName+"/.tasproxy", "Configuration file: /path/to/file.yaml, default = "+homeDirName+"/.tasproxy")
-	flag.String("custom", "", "Custom command")
+	flag.String("custom", "", "Custom escaped command string to send")
 	flag.String("device", "", "Device")
 	flag.Bool("displayconfig", false, "Display configuration")
 	flag.Bool("help", false, "Help")
 
 	// to implement
-	flag.String("ip", "", "IP")
+	flag.String("host", "", "IP address or hostname of a device")
 
 	flag.Bool("json", false, "Output JSON")
 	flag.Bool("list", false, "List Devices")
@@ -416,13 +417,24 @@ func main() {
 	// temp
 	verbose = viper.GetBool("verbose")
 
+	// prevent conflicting arguments from breaking logic
 	if (viper.IsSet("custom")) && (viper.IsSet("cmd")) {
-		fmt.Println("custom or cmd cannot be used at the same time")
+		fmt.Println("--custom or --cmd cannot be used at the same time")
 		os.Exit(1)
 	}
 
 	if (!viper.IsSet("custom")) && (!viper.IsSet("cmd")) {
-		fmt.Println("either custom or cmd must be set")
+		fmt.Println("either --custom or --cmd must be set")
+		os.Exit(1)
+	}
+
+	if (viper.IsSet("device")) && (viper.IsSet("host")) {
+		fmt.Println("--device and --host cannot be used at the same time")
+		os.Exit(1)
+	}
+
+	if (!viper.IsSet("device")) && (!viper.IsSet("host")) {
+		fmt.Println("either --device or --host must be set")
 		os.Exit(1)
 	}
 
@@ -455,23 +467,30 @@ func main() {
 		}
 	}
 
-	// check if device is valid
-	if checkDeviceValid(viper.GetString("device")) {
-		if verbose {
-			fmt.Printf("Device: %s found\n", viper.GetString("device"))
-		}
+	if viper.IsSet("host") {
+		ipofdevice = viper.GetString("host")
 	} else {
-		fmt.Printf("Device: %s not found\n", viper.GetString("device"))
-		os.Exit(1)
+		// check if device is valid
+		if checkDeviceValid(viper.GetString("device")) {
+			if verbose {
+				fmt.Printf("Device: %s found\n", viper.GetString("device"))
+			}
+
+			ipofdevice = viper.GetStringMap("devices")[viper.GetString("device")].(string)
+
+		} else {
+			fmt.Printf("Device: %s not found\n", viper.GetString("device"))
+			os.Exit(1)
+		}
 	}
+
+	//============
 
 	if verbose {
 		fmt.Printf("sendcommand: %s\n", sendCommand)
 	}
 
-	// send the command
-	ipofdevice := viper.GetStringMap("devices")[viper.GetString("device")].(string)
-
+	// send the command to tasmota
 	response, success := sendTasmota(ipofdevice, sendCommand)
 
 	if !success {
@@ -629,7 +648,7 @@ func displayHelp() {
       --device [name]       Name of device
       --displayconfig       Display configuration
       --help                Display help
-      --ip [ip address]     IP address of device
+      --host [address]      IP address or hostname of device
       --json                Output JSON
       --list                List all configured devices
       --verbose             Be verbose
