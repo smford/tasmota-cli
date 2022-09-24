@@ -66,4 +66,7 @@ You can install a few ways:
 
 - https compatability
 - compatability with tasmota devices that need username and password
+- add custom commands to config
+
+## Done
 - sorting of device list

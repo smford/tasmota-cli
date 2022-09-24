@@ -21,7 +21,7 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.1"
+const applicationVersion = "v0.1.1"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
@@ -672,8 +672,14 @@ func displayConfig() {
 // list devices
 func displayDevices() {
 	if viper.IsSet("devices") {
+		// do sorting
+		var keys []string
+		for k := range viper.GetStringMap("devices") {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
 
-		// fix: sort the devices by name
+		// print the list
 		w := new(tabwriter.Writer)
 
 		const padding = 1
@@ -683,9 +689,10 @@ func displayDevices() {
 		fmt.Fprintf(w, "%s\t%s\n", "IP", "Name")
 		fmt.Fprintf(w, "%s\t%s\n", "--", "----")
 
-		for k, v := range viper.GetStringMap("devices") {
-			fmt.Fprintf(w, "%s\t%s\n", v, k)
+		for _, k := range keys {
+			fmt.Fprintf(w, "%s\t%s\n", viper.GetStringMap("devices")[k].(string), k)
 		}
+		fmt.Println("======")
 
 	} else {
 		fmt.Println("no devices found")
