@@ -1,5 +1,4 @@
-# tasmota-proxy
-tasmota-proxy
+# tasmota-cli
 
 A simple CLI to control tasmota devices.
 
@@ -12,30 +11,30 @@ A simple CLI to control tasmota devices.
 
 You can install a few ways:
 
-1. Download the binary for your OS from https://github.com/smford/tasmota-proxy/releases
+1. Download the binary for your OS from https://github.com/smford/tasmota-cli/releases
 1. or use `go install`
    ```
-   go install -v github.com/smford/tasmota-proxy@latest
+   go install -v github.com/smford/tasmota-cli@latest
    ```
 1. or clone the git repo and build
    ```
-   git clone git@github.com:smford/tasmota-proxy.git
-   cd tasmota-proxy
+   git clone git@github.com:smford/tasmota-cli.git
+   cd tasmota-cli
    go get -v
    go build
    ```
 1. or by brew:
    ```
-   brew install smford/tap/tasmota-proxy
+   brew install smford/tap/tasmota-cli
    ```
 
 ## Usage
 
 1. By command line:
-   `tasmota-proxy --device lamp --cmd status`
+   `tasmota-cli --device lamp --cmd status`
 1. By configuration file:
    ```bash
-   cat ~/.tasproxy
+   cat ~/.tascli
    ---
    verbose: true
    devices:
@@ -44,13 +43,13 @@ You can install a few ways:
      large: 192.168.10.127
    ```
 1. By environment variable:
-   `export TASPROXY_CONFIG="/path/to/config.yaml"`
+   `export TASCLI_CONFIG="/path/to/config.yaml"`
 
 ## Command Line Options
 
 ```
 --cmd [x]             Commands: on, off, status, statusall, timers
---config [file]       Configuration file: /path/to/file.yaml, default = ""/.tasproxy"
+--config [file]       Configuration file: /path/to/file.yaml, default = ""/.tascli"
 --custom [command]    Custom escaped command string to send
 --device [name]       Name of device
 --displayconfig       Display configuration

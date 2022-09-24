@@ -1,4 +1,4 @@
-module tasmota-proxy
+module tasmota-cli
 
 go 1.19
 

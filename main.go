@@ -20,9 +20,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.1.1"
-const applicationUrl string = "https://github.com/smford/tasmota-proxy"
+const applicationName string = "tasmota-cli"
+const applicationVersion = "v0.2"
+const applicationUrl string = "https://github.com/smford/tasmota-cli"
 
 var (
 	verbose     bool
@@ -348,7 +348,7 @@ func init() {
 	checkErr(err)
 
 	flag.String("cmd", "", "Command: on, off, status, statusall, timers")
-	flag.String("config", homeDirName+"/.tasproxy", "Configuration file: /path/to/file.yaml, default = "+homeDirName+"/.tasproxy")
+	flag.String("config", homeDirName+"/.tascli", "Configuration file: /path/to/file.yaml, default = "+homeDirName+"/.tascli")
 	flag.String("custom", "", "Custom escaped command string to send")
 	flag.String("device", "", "Device")
 	flag.Bool("displayconfig", false, "Display configuration")
@@ -367,7 +367,7 @@ func init() {
 
 	checkErr(err)
 
-	viper.SetEnvPrefix("TASPROXY")
+	viper.SetEnvPrefix("TASCLI")
 	err = viper.BindEnv("config")
 	checkErr(err)
 
@@ -625,7 +625,7 @@ func isCommandValid(command string) bool {
 func displayHelp() {
 	message := `
       --cmd [x]             Commands: on, off, status, statusall, timers
-      --config [file]       Configuration file: /path/to/file.yaml, default = "` + homeDirName + `"/.tasproxy"
+      --config [file]       Configuration file: /path/to/file.yaml, default = "` + homeDirName + `"/.tascli"
       --custom [command]    Custom escaped command string to send
       --device [name]       Name of device
       --displayconfig       Display configuration
