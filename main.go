@@ -21,7 +21,7 @@ import (
 )
 
 const applicationName string = "tasmota-proxy"
-const applicationVersion = "v0.0.7.4"
+const applicationVersion = "v0.1"
 const applicationUrl string = "https://github.com/smford/tasmota-proxy"
 
 var (
@@ -353,10 +353,7 @@ func init() {
 	flag.String("device", "", "Device")
 	flag.Bool("displayconfig", false, "Display configuration")
 	flag.Bool("help", false, "Help")
-
-	// to implement
 	flag.String("host", "", "IP address or hostname of a device")
-
 	flag.Bool("json", false, "Output JSON")
 	flag.Bool("list", false, "List Devices")
 	flag.Bool("version", false, "Version")
@@ -444,22 +441,17 @@ func main() {
 	// prep custom command to send
 	if viper.IsSet("custom") {
 		if verbose {
-			fmt.Println("custom set")
+			fmt.Printf("Custom Command: %s\n", viper.GetString("custom"))
+			fmt.Printf("Custom Command Escaped: %s\n", url.QueryEscape(viper.GetString("custom")))
 		}
-
-		junk := viper.GetString("custom")
-		fmt.Printf("        junk: %s\n", junk)
-		fmt.Printf("junk escaped: %s\n", url.QueryEscape(junk))
-		sendCommand = url.QueryEscape(junk)
+		sendCommand = url.QueryEscape(viper.GetString("custom"))
 	}
 
 	// prep cmd to send
 	if viper.IsSet("cmd") {
-		fmt.Println("cmd set")
-
 		// check if command is valid
 		if isCommandValid(viper.GetString("cmd")) {
-			// convert shorthand cmd to actual tasmota command
+			// convert shorthand cmd to actual tasmota compatable command
 			sendCommand = commandList[viper.GetString("cmd")]
 		} else {
 			fmt.Printf("Command \"%s\" is invalid\n", viper.GetString("cmd"))
@@ -484,28 +476,22 @@ func main() {
 		}
 	}
 
-	//============
-
-	if verbose {
-		fmt.Printf("sendcommand: %s\n", sendCommand)
-	}
-
 	// send the command to tasmota
 	response, success := sendTasmota(ipofdevice, sendCommand)
 
 	if !success {
 		// could not send to tasmota
-		fmt.Println("oops not successful")
+		fmt.Println("Error: Could not connect to device")
 		os.Exit(1)
 	} else {
 
 		if verbose {
-			fmt.Printf("successful response: %s\n", prettyPrint(response))
+			fmt.Printf("Successful Response: %s\n", prettyPrint(response))
 		}
 
 		// if custom command was sent
 		if viper.IsSet("custom") {
-			// as response will be in an unknown json format, just make pretty
+			// as response will be in an unknown json format, just make pretty indents and dump to console
 			var niceJSON bytes.Buffer
 			error := json.Indent(&niceJSON, response, "", "\t")
 			checkErr(error)
@@ -516,13 +502,7 @@ func main() {
 		// if baked in cmd was sent
 		if viper.IsSet("cmd") {
 
-			if verbose {
-				fmt.Println("cmd is set")
-			}
-
 			cleanCommand := strings.ToLower(viper.GetString("cmd"))
-
-			fmt.Printf("cleancommand before equalfold: %s\n", cleanCommand)
 
 			// start: if power on or power off
 			if strings.EqualFold(cleanCommand, "on") || strings.EqualFold(cleanCommand, "off") {
@@ -556,7 +536,7 @@ func main() {
 					os.Exit(0)
 				}
 
-				// if status all
+				// if statusall
 				if strings.EqualFold(cleanCommand, "statusall") {
 					fmt.Printf("%s\n", prettyPrint(res))
 					os.Exit(0)
@@ -575,9 +555,8 @@ func main() {
 					fmt.Printf("%s\n", prettyPrint(res))
 					os.Exit(0)
 				} else {
-					// if wanting console output
 
-					fmt.Println("printing timers")
+					// if wanting console output
 					printTimers(res)
 					os.Exit(0)
 				}
@@ -598,9 +577,12 @@ func sendTasmota(ip string, cmd string) ([]byte, bool) {
 	}
 
 	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		log.Fatal("NewRequest: ", err)
-	}
+
+	// fix
+	//if err != nil {
+	//	log.Fatal("NewRequest: ", err)
+	//}
+	checkErr(err)
 
 	client := &http.Client{}
 	client.Timeout = time.Second * 5
@@ -691,6 +673,7 @@ func displayConfig() {
 func displayDevices() {
 	if viper.IsSet("devices") {
 
+		// fix: sort the devices by name
 		w := new(tabwriter.Writer)
 
 		const padding = 1
