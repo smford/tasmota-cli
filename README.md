@@ -5,6 +5,9 @@ A simple CLI to control tasmota devices.
 
 ## Features
 
+- something
+- something else
+
 ## Installation
 
 You can install a few ways:
@@ -26,8 +29,7 @@ You can install a few ways:
    brew install smford/tap/tasmota-proxy
    ```
 
-## Configuration
-
+## Usage
 
 1. By command line:
    `tasmota-proxy --device lamp --cmd status`
@@ -44,6 +46,21 @@ You can install a few ways:
 1. By environment variable:
    `export TASPROXY_CONFIG="/path/to/config.yaml"`
 
+## Command Line Options
+
+```
+--cmd [x]             Commands: on, off, status, statusall, timers
+--config [file]       Configuration file: /path/to/file.yaml, default = ""/.tasproxy"
+--custom [command]    Custom escaped command string to send
+--device [name]       Name of device
+--displayconfig       Display configuration
+--help                Display help
+--host [address]      IP address or hostname of device
+--json                Output JSON
+--list                List all configured devices
+--verbose             Be verbose
+--version             Display version
+```
 
 ## Todo
 
